@@ -1,13 +1,23 @@
+const fs = require('fs');
+const path = require('path');
 
-const handler = (req, res, next) => {
+const logFilePath = path.join(__dirname, 'requests.log');
+
+function logMiddleware(req, res, next) {
   const start = Date.now();
+  const { method, originalUrl } = req;
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
   res.on('finish', () => {
     const duration = Date.now() - start;
-    console.log(`[${req.method}] ${req.originalUrl} - ${res.statusCode} - ${duration}ms`);
+    const log = `[${new Date().toISOString()}] ${method} ${originalUrl} ${res.statusCode} - ${duration}ms - ${ip}\n`;
+    
+    fs.appendFile(logFilePath, log, err => {
+      if (err) console.error('Error writing log:', err);
+    });
   });
 
-  next(); 
-};
+  next();
+}
 
-module.exports = logger;
+module.exports = logMiddleware;
